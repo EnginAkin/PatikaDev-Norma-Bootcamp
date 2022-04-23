@@ -1,5 +1,6 @@
 package com.tr.shopping.service.concretes;
 
+import com.tr.shopping.service.abstracts.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,17 +31,16 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ConverterService converterService;
-    private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
 
     @Override
-    public GeneralResponse getProductById(Long id) {
+    public GeneralDataResponse getProductById(Long id) {
         if(!productRepository.findById(id).isPresent()) throw new ProductIdCannotFoundException();
         Product product = productRepository.findById(id).get();
         ProductResponse productResponse=converterService.getProductConverterService().productToProductResponse(product);
         log.info("get product by id successfull returned product  : {}",product.getName());
         return new GeneralDataResponse<>(ProductResponseMessage.PRODUCT_GET_BYID_SUCCESSFUL,true,productResponse);
     }
-
     @Override
     public GeneralResponse createProduct(ProductDto productDto)throws AddingProductNonExistCategoryException {
         checkCategoryIsAcceptable(productDto); //check category is already exist , if not exist category throw error , if exist category add product
@@ -49,7 +49,6 @@ public class ProductServiceImpl implements ProductService {
         log.info("create product : successfull created product :{}",product.getName());
         return new GeneralSuccessfullResponse(ProductResponseMessage.PRODUCT_CREATED_SUCCESSFULL);
     }
-
 
     @Override
     public GeneralResponse getProductsByCategoryName(String categoryName) {
@@ -67,7 +66,7 @@ public class ProductServiceImpl implements ProductService {
         return new GeneralSuccessfullResponse(ProductResponseMessage.PRODUCT_DELETED_SUCCESSFULL);
     }
     @Override
-    public GeneralResponse getAllProducts() { // get all products . returned product if  stock > 0
+    public GeneralDataResponse getAllProducts() { // get all products . returned product if  stock > 0
          List<ProductResponse> products=productRepository.findAll().stream()
                 .filter(product -> product.getStock().getQuantity().compareTo(BigDecimal.ZERO)>0)
                 .map(product -> converterService.getProductConverterService().productToProductResponse(product)).collect(Collectors.toList());
@@ -85,7 +84,7 @@ public class ProductServiceImpl implements ProductService {
     }
     private Boolean isAlreadyExistCategory(Category category){
         if(Objects.isNull(category)) return true;
-        Category categoryByName = categoryRepository.getCategoryByName(category.getName());
+        Category categoryByName = categoryService.getCategoryByName(category.getName());
         if(categoryByName==null) {
             return false;
         }
@@ -94,7 +93,7 @@ public class ProductServiceImpl implements ProductService {
     }
     private Category FindParentCategory(Category category){
         if(Objects.isNull(category)) return null;
-        Category categoryByName = categoryRepository.getCategoryByName(category.getName());
+        Category categoryByName = categoryService.getCategoryByName(category.getName());
         if(categoryByName!=null) {
             return categoryByName;
         }
